@@ -185,11 +185,11 @@ int bitCount(int x) {
   mask3=mask3|mask3<<16;
   mask4=0xff|0xff<<16;
   mask5=0xff|0xff<<8;
-  ans=(x&mask1)+(((x&mask1<<1)>>1)&0x7FFFFFFF);
-  ans=(ans&mask2)+(((ans&mask2<<2)>>2)&0x3FFFFFFF);
-  ans=(ans&mask3)+(((ans&mask3<<4)>>4)&0x0FFFFFFF);
-  ans=(ans&mask4)+(((ans&mask4<<8)>>8));
-  ans=(ans&mask5)+(((ans&mask5<<16)>>16));
+  ans=(x&mask1)+((x>>1)&mask1);
+  ans=(ans&mask2)+((ans>>2)&mask2);
+  ans=(ans&mask3)+((ans>>4)&mask3);
+  ans=(ans&mask4)+((ans>>8)&mask4);
+  ans=(ans&mask5)+((ans>>16)&mask5);
   return ans;
 }
 /* 
@@ -252,7 +252,7 @@ int divpwr2(int x, int n) {
  *   Rating: 2
  */
 int negate(int x) {
-  return 2;
+  return ~x+1;
 }
 /* 
  * isPositive - return 1 if x > 0, return 0 otherwise 
@@ -262,7 +262,7 @@ int negate(int x) {
  *   Rating: 3
  */
 int isPositive(int x) {
-  return 2;
+  return !((x>>31)|!x);
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
@@ -272,7 +272,8 @@ int isPositive(int x) {
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-  return 2;
+  int cmp=x+~y+1;
+  return (0x1&(((cmp>>31)|!x)))|(!(x^(1<<31)));
 }
 /*
  * ilog2 - return floor(log base 2 of x), where x > 0
