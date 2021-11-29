@@ -204,9 +204,8 @@ int bang(int x) {
   ans=ans|(ans>>8);
   ans=ans|(ans>>4);
   ans=ans|(ans>>2);
-  ans=(ans|(ans>>1))&0x1^0x1;
+  ans=((ans|(ans>>1))&0x1)^0x1;
   return ans;
-
 }
 /* 
  * tmin - return minimum two's complement integer 
@@ -272,8 +271,11 @@ int isPositive(int x) {
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-  int cmp=x+~y+1;
-  return (0x1&(((cmp>>31)|!x)))|(!(x^(1<<31)));
+  int cmp=!!((x+~y)>>31);
+  x=x>>31;
+  y=y>>31;
+  return (!!x|!y)&((!!x&!y)|cmp);
+
 }
 /*
  * ilog2 - return floor(log base 2 of x), where x > 0
@@ -283,7 +285,12 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4
  */
 int ilog2(int x) {
-  return 2;
+  int ans=(!!(x>>16))<<4;
+  ans=ans+((!!(x>>(8+ans)))<<3);
+  ans=ans+((!!(x>>(4+ans)))<<2);
+  ans=ans+((!!(x>>(2+ans)))<<1);
+  ans=ans+((!!(x>>(1+ans))));
+  return ans;
 }
 /* 
  * float_neg - Return bit-level equivalent of expression -f for
@@ -297,7 +304,9 @@ int ilog2(int x) {
  *   Rating: 2
  */
 unsigned float_neg(unsigned uf) {
- return 2;
+  unsigned int nan=((~uf)>>23)&0xff;
+  nan=(!!(nan)|(!(uf&0x7fffff)));
+ return uf^(nan<<31);
 }
 /* 
  * float_i2f - Return bit-level equivalent of expression (float) x
@@ -309,7 +318,54 @@ unsigned float_neg(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_i2f(int x) {
-  return 2;
+  unsigned sign=x&(0x80000000);
+  unsigned val;
+  unsigned res;
+  unsigned e;
+  unsigned tmp,tmp1;
+  int n;
+  if (sign){
+  val=-x;
+  }else{
+  val=x;
+  }
+  if(x==0){
+    return x;
+  }else if(x==0x80000000){
+    return 0xcf000000;
+  }
+   tmp=val;
+  tmp1=val;
+  n=-1;
+  while(tmp){
+    tmp=tmp>>1;
+    n++;
+  }
+  val-=(1<<n);
+  if(n<24){
+    val=val<<(23-n);
+  }else{
+    int cp=1<<(n-24);
+    int mod=val&((cp<<1)-1);
+    val=val>>(n-23);
+    if(mod>=cp){
+      if(val==0x7fffff){
+        val=0;
+        n++;
+      }
+      else if(mod==cp){
+        val=(val&1)+val;
+      }else{
+        val+=1;
+      }
+    }
+  }
+    e=n+127;
+    e=e<<23;
+    res= sign|e|val;
+
+
+  return res;
 }
 /* 
  * float_twice - Return bit-level equivalent of expression 2*f for
@@ -323,5 +379,26 @@ unsigned float_i2f(int x) {
  *   Rating: 4
  */
 unsigned float_twice(unsigned uf) {
-  return 2;
+  unsigned sign=uf&0x80000000;
+  unsigned exp=(uf>>23)&0xff;
+  unsigned cmp=1<<22;
+  unsigned val=uf&0x7fffff;
+  if (!exp){
+  if(val<cmp){
+    val=val<<1;
+  }else{
+    val=(val*2)-(cmp<<1);
+    exp=1;
+  }
+  }else if(!(exp^0xff)) {
+    return uf;
+  }else{
+    if(exp<254){
+      exp+=1;
+    }else{
+      exp+=1;
+      val=0;
+    }
+  }
+  return sign|(exp<<23)|val;
 }
